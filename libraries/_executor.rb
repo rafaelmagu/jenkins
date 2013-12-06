@@ -21,6 +21,7 @@
 
 require 'mixlib/shellout'
 require 'shellwords'
+require 'timeout'
 require 'uri'
 
 module Jenkins

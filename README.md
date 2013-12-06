@@ -136,17 +136,23 @@ jenkins_command 'quiet-down'
 
 **NOTE** You must add your own `not_if`/`only_if` guards to the `jenkins_command` to prevent duplicate commands from executing. Just like Chef's core `execute` resource, the `jenkins_command` resource has no way of being idempotent.
 
-### jenkins_node
-This resource can be used to configure nodes as the `node_ssh` and `node_windows` recipes do or "Launch slave via execution of command on the Master":
+### jenkins_slave
+The `jenkins_slave` reosurce can be used to configure Jenkins nodes (slaves). Although Jenkins supports multiple commands (such as connect, disconnect, offline, online, wait-offline, etc.), many of those commands are "one-off" commands that do not make sense in a Chef recipe. In fact, they could even be considered anti-patterns. For that reason, they are not available actions on the `jenkins_node` resource, but you can still manually execute those commands via the `jenkins_command` resource, which permits arbitrary CLI command execution.
+
+This resource supports the following actions:
+
+    :create, :delete
+
+The resource supports the following parameters:
+
+| Attribute   | Description                     | Default |
+| name        | The name of the slave to launch |         |
+| description | The description of the slave    |         |
 
 ```ruby
-jenkins_node node['fqdn'] do
-  description  'My node for things, stuff and whatnot'
-  executors    5
-  remote_fs    '/var/jenkins'
-  launcher     'command'
-  command      "ssh -i my_key #{node[:fqdn]} java -jar #{remote_fs}/slave.jar"
-  env          'ANT_HOME' => '/usr/local/ant', 'M2_REPO' => '/dev/null'
+jenkins_slave 'my-slave' do
+  description 'This is my awesome slave - it does what I say'
+  executors   5
 end
 ```
 

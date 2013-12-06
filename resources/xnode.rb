@@ -20,13 +20,9 @@
 # limitations under the License.
 #
 
-actions :create, :update, :delete, :connect, :disconnect, :offline, :online
-
 attribute :description, :kind_of => String
 attribute :remote_fs, :kind_of => String
-attribute :executors, :kind_of => Integer
 attribute :mode, :equal_to => %w(normal exclusive)
-attribute :labels, :kind_of => Array
 attribute :launcher, :equal_to => %w(jnlp command ssh)
 attribute :availability, :equal_to => %w(always demand)
 attribute :in_demand_delay, :kind_of => Integer
@@ -45,8 +41,3 @@ attribute :username, :kind_of => String
 attribute :password, :kind_of => String
 attribute :private_key, :kind_of => String
 attribute :jvm_options, :kind_of => String
-
-def initialize(name, run_context = nil)
-  super
-  @action = :create
-end
