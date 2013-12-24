@@ -26,20 +26,17 @@ def load_current_resource
   @current_resource = Chef::Resource::JenkinsJob.new(@new_resource.name)
 end
 
-def store
-  validate_job_config!
-  if !exists? # create
-    Chef::Log.debug("#{@new_resource} does not exist - creating.")
-    post_job(new_job_url)
-  else # update
-    Chef::Log.debug("#{@new_resource} exists - updating")
-    post_job(job_url)
-  end
-  new_resource.updated_by_last_action(true)
+def action_create
+  jenkins_cli "create-job #{@new_resource.job_name} < #{@new_resource.config}"
 end
 
-alias_method :action_create, :store
-alias_method :action_update, :store
+def action_update
+  if !exists?
+    jenkins_cli "update-job #{@new_resource.job_name} < #{@new_resource.config}"
+  else
+    jenkins_cli "create-job #{@new_resource.job_name} < #{@new_resource.config}"
+  end
+end
 
 def action_delete
   jenkins_cli "delete-job '#{@new_resource.job_name}'"
@@ -69,10 +66,6 @@ def job_url
   "#{@new_resource.url}/job/#{@new_resource.job_name}/config.xml"
 end
 
-def new_job_url
-  "#{@new_resource.url}/createItem?name=#{@new_resource.job_name}"
-end
-
 def exists?
   @exists ||= begin
     url = URI.parse(URI.escape(job_url))
@@ -80,13 +73,4 @@ def exists?
     Chef::Log.debug("#{@new_resource} GET #{url.request_uri} == #{response.code}")
     response.kind_of?(Net::HTTPSuccess)
   end
-end
-
-def post_job(url)
-  url = URI.parse(URI.escape(url))
-  Chef::Log.debug("#{@new_resource} POST #{url.request_uri} using #{@new_resource.config}")
-  body = IO.read(@new_resource.config)
-  headers = { 'Content-Type' => 'text/xml' }
-  response = Chef::REST::RESTRequest.new(:POST, url, body, headers).call
-  response.error! unless response.kind_of?(Net::HTTPSuccess)
 end
