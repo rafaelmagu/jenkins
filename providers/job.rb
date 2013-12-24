@@ -105,11 +105,15 @@ def exists?
   command << " --password #{password}" if password
   command << " --password_file #{password_file}" if password_file
 
-  cmd = shell_out!(command, home)
-  Chef::Log.debug("#{@new_resource} get-job status: #{cmd.exitstatus}")
-  if cmd.exitstatus > 0
+  @exists ||= begin
+    cmd = shell_out!(command, home)
+    Chef::Log.debug("#{@new_resource} get-job status: #{cmd.exitstatus}")
+    if cmd.exitstatus > 0
+      false
+    else
+      true
+    end
+  rescue
     false
-  else
-    true
   end
 end
