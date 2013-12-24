@@ -26,17 +26,19 @@ def load_current_resource
   @current_resource = Chef::Resource::JenkinsJob.new(@new_resource.name)
 end
 
-def action_create
-  jenkins_cli "create-job #{@new_resource.job_name} < #{@new_resource.config}"
+def action_update
+  validate_job_config!
+  begin
+    jenkins_cli "update-job #{@new_resource.job_name} < #{@new_resource.config}"
+    Chef::Log.debug("#{@new_resource} exists - updated")
+  rescue
+    jenkins_cli "create-job #{@new_resource.job_name} < #{@new_resource.config}"
+    Chef::Log.debug("#{@new_resource} did not exist - created.")
+  end
+  new_resource.updated_by_last_action(true)
 end
 
-def action_update
-  if !exists?
-    jenkins_cli "update-job #{@new_resource.job_name} < #{@new_resource.config}"
-  else
-    jenkins_cli "create-job #{@new_resource.job_name} < #{@new_resource.config}"
-  end
-end
+alias_method :action_create, :action_update
 
 def action_delete
   jenkins_cli "delete-job '#{@new_resource.job_name}'"
@@ -59,18 +61,5 @@ private
 def validate_job_config!
   unless ::File.exist?(@new_resource.config)
     fail "'#{@new_resource.config}' does not exist or is not a valid Jenkins config file!"
-  end
-end
-
-def job_url
-  "#{@new_resource.url}/job/#{@new_resource.job_name}/config.xml"
-end
-
-def exists?
-  @exists ||= begin
-    url = URI.parse(URI.escape(job_url))
-    response = Chef::REST::RESTRequest.new(:GET, url, nil).call
-    Chef::Log.debug("#{@new_resource} GET #{url.request_uri} == #{response.code}")
-    response.kind_of?(Net::HTTPSuccess)
   end
 end
