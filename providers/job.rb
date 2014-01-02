@@ -22,41 +22,7 @@
 # limitations under the License.
 #
 
-def load_current_resource
-  @current_resource = Chef::Resource::JenkinsJob.new(@new_resource.name)
-end
-
-def action_update
-  validate_job_config!
-  if exists?
-    Chef::Log.debug("#{@new_resource} exists - updating")
-    jenkins_cli "update-job #{@new_resource.job_name} < #{@new_resource.config}"
-  else
-    Chef::Log.debug("#{@new_resource} does not exist - creating.")
-    jenkins_cli "create-job #{@new_resource.job_name} < #{@new_resource.config}"
-  end
-  new_resource.updated_by_last_action(true)
-end
-
-alias_method :action_create, :action_update
-
-def action_delete
-  jenkins_cli "delete-job '#{@new_resource.job_name}'"
-end
-
-def action_disable
-  jenkins_cli "disable-job '#{@new_resource.job_name}'"
-end
-
-def action_enable
-  jenkins_cli "enable-job '#{@new_resource.job_name}'"
-end
-
-def action_build
-  jenkins_cli "build '#{@new_resource.job_name}'"
-end
-
-private
+# private
 
 def validate_job_config!
   unless ::File.exist?(@new_resource.config)
@@ -65,6 +31,7 @@ def validate_job_config!
 end
 
 def exists?
+  Chef::Log.debug("Checking if #{@new_resource} exists")
   # ugly paste'n'hack to check if job exists without using http checks (this is auth-friendly)
   url = node['jenkins']['server']['url']
   home = node['jenkins']['node']['home']
@@ -106,14 +73,55 @@ def exists?
   command << " --password_file #{password_file}" if password_file
 
   @exists ||= begin
-    cmd = shell_out!(command, home)
-    Chef::Log.debug("#{@new_resource} get-job status: #{cmd.exitstatus}")
+    cmd = Mixlib::ShellOut.new(command, :cwd => home)
+    cmd.run_command
+    Chef::Log.debug(cmd.stdout)
     if cmd.exitstatus > 0
+      Chef::Log.debug("#{@new_resource} does not exist")
       false
     else
+      Chef::Log.debug("#{@new_resource} exists")
       true
     end
   rescue
+    Chef::Log.debug("Check failed. #{@new_resource} does not exist")
     false
   end
+end
+
+# public
+
+def load_current_resource
+  @current_resource = Chef::Resource::JenkinsJob.new(@new_resource.name)
+end
+
+def action_update
+  validate_job_config!
+  if exists?
+    Chef::Log.debug("#{@new_resource} exists - updating")
+    jenkins_cli "update-job #{@new_resource.job_name} < #{@new_resource.config}"
+  else
+    Chef::Log.debug("#{@new_resource} does not exist - creating.")
+    jenkins_cli "create-job #{@new_resource.job_name} < #{@new_resource.config}"
+  end
+  new_resource.updated_by_last_action(true)
+end
+
+alias_method :action_create, :action_update
+
+def action_delete
+  jenkins_cli "delete-job '#{@new_resource.job_name}'"
+end
+
+def action_disable
+  jenkins_cli "disable-job '#{@new_resource.job_name}'"
+end
+
+def action_enable
+  jenkins_cli "enable-job '#{@new_resource.job_name}'"
+end
+
+def action_build
+  Chef::Log.debug("Building #{@new_resource.job_name}")
+  jenkins_cli "build '#{@new_resource.job_name}'"
 end
